@@ -2,14 +2,19 @@ import apiClient from './client';
 
 // ─── AUTH ────────────────────────────────────────────────────────────────────
 export const authApi = {
-  login: (data: { email: string; password: string }) =>
-    apiClient.post('/api/Auth/login', data),
-  register: (data: any) => apiClient.post('/api/Auth/register', data),
-  confirmEmail: (data: any) => apiClient.post('/api/Auth/confirm-email', data),
-  forgotPassword: (data: { email: string }) => apiClient.post('/api/Auth/forgot-password', data),
-  resetPassword: (data: any) => apiClient.post('/api/Auth/reset-password', data),
-  refreshToken: (token: string) => apiClient.post('/api/Auth/refresh-token', token),
-  revokeToken: (token: string) => apiClient.post('/api/Auth/revoke-token', token),
+  login:               (data: { email: string; password: string }) =>
+                         apiClient.post('/api/Auth/login', data),
+  register:            (data: any) => apiClient.post('/api/Auth/register', data),
+  confirmEmail:        (data: { userId: string; code: string }) =>
+                         apiClient.post('/api/Auth/confirm-email', data),
+  resendConfirmation:  (data: { email: string }) =>
+                         apiClient.post('/api/Auth/resend-confirmation-email', data),
+  forgotPassword:      (data: { email: string }) =>
+                         apiClient.post('/api/Auth/forgot-password', data),
+  resetPassword:       (data: { email: string; code: string; newPassword: string }) =>
+                         apiClient.post('/api/Auth/reset-password', data),
+  refreshToken:        (token: string) => apiClient.post('/api/Auth/refresh-token', token),
+  revokeToken:         (token: string) => apiClient.post('/api/Auth/revoke-token', token),
 };
 
 // ─── ACCOUNTS (GL) ───────────────────────────────────────────────────────────

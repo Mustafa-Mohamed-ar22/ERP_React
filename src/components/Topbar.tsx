@@ -6,7 +6,15 @@ import { useI18n } from '../context/I18nContext';
 import { useTheme } from '../context/ThemeContext';
 import toast from 'react-hot-toast';
 
-export default function Topbar({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => void }) {
+export default function Topbar({
+  collapsed,
+  onToggleDesktop,
+  onToggleMobile,
+}: {
+  collapsed: boolean;
+  onToggleDesktop: () => void;
+  onToggleMobile:  () => void;
+}) {
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
@@ -64,7 +72,12 @@ export default function Topbar({ collapsed, onToggle }: { collapsed: boolean; on
   return (
     <header className="topbar">
       <div className="topbar-left">
-        <button className="toggle-btn" onClick={onToggle} title="Toggle sidebar" id="sidebar-toggle">
+        <button
+          className="toggle-btn"
+          onClick={() => window.innerWidth <= 768 ? onToggleMobile() : onToggleDesktop()}
+          title="Toggle sidebar"
+          id="sidebar-toggle"
+        >
           <Menu size={18} />
         </button>
         <div className="topbar-title">{title}</div>

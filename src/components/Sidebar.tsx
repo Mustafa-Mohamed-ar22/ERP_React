@@ -21,7 +21,15 @@ const ICONS: Record<string, React.ElementType> = {
   CalendarOff, CalendarCheck, Clock, Tag,
 };
 
-export default function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => void }) {
+export default function Sidebar({
+  collapsed,
+  mobileOpen,
+  onCloseMobile,
+}: {
+  collapsed: boolean;
+  mobileOpen: boolean;
+  onCloseMobile: () => void;
+}) {
   const { user, logout, hasPermission } = useAuth();
   const { t, isRTL } = useI18n();
   const navigate = useNavigate();
@@ -76,7 +84,7 @@ export default function Sidebar({ collapsed, onToggle }: { collapsed: boolean; o
   const ChevronIcon = isRTL ? ChevronLeft : ChevronRight;
 
   return (
-    <aside className={`sidebar ${collapsed ? 'collapsed' : ''}`}>
+    <aside className={`sidebar ${collapsed ? 'collapsed' : ''} ${mobileOpen ? 'mobile-open' : ''}`}>
       {/* Logo */}
       <div className="sidebar-logo">
         <div className="sidebar-logo-icon">
@@ -121,6 +129,7 @@ export default function Sidebar({ collapsed, onToggle }: { collapsed: boolean; o
                         to={item.path}
                         className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
                         title={collapsed ? label(item.labelKey) : undefined}
+                        onClick={onCloseMobile}
                       >
                         <span className="nav-icon"><IconComp size={18} /></span>
                         {!collapsed && <span className="nav-label">{label(item.labelKey)}</span>}

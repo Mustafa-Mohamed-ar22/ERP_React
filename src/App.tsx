@@ -11,6 +11,9 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Unauthorized from './pages/Unauthorized';
+import ConfirmEmail from './pages/ConfirmEmail';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 
 // ── App pages ─────────────────────────────────────────────────────────────────
 import Dashboard from './pages/Dashboard';
@@ -59,6 +62,15 @@ export default function App() {
               {/* ── Public routes ─────────────────────────────────────────── */}
               <Route path="/login"    element={<Login />} />
               <Route path="/register" element={<Register />} />
+              {/* Forgot + Reset password (public, no auth required) */}
+              <Route path="/forgot-password"          element={<ForgotPassword />} />
+              {/* Backend reset email links to /auth/forgetPassword?email=...&code=... */}
+              <Route path="/auth/forgetPassword"       element={<ResetPassword />} />
+              {/* Allow direct navigation too */}
+              <Route path="/reset-password"            element={<ResetPassword />} />
+              {/* Backend confirmation email links to /auth/emailConfirmation?userId=...&code=... */}
+              <Route path="/auth/emailConfirmation"    element={<ConfirmEmail />} />
+              <Route path="/confirm-email"             element={<ConfirmEmail />} />
 
               {/* ── All authenticated routes inside Layout ─────────────────── */}
               <Route element={<Layout />}>

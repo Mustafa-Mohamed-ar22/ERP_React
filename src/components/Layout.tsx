@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Outlet, Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Sidebar from './Sidebar';
@@ -6,7 +6,14 @@ import Topbar from './Topbar';
 
 export default function Layout() {
   const { isAuthenticated, isLoading } = useAuth();
+  // Desktop: collapsed/expanded sidebar
   const [collapsed, setCollapsed] = useState(false);
+  // Mobile: sidebar overlay open/closed
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  const toggleDesktop = useCallback(() => setCollapsed(c => !c), []);
+  const toggleMobile  = useCallback(() => setMobileOpen(o => !o), []);
+  const closeMobile   = useCallback(() => setMobileOpen(false), []);
 
   if (isLoading) {
     return (
@@ -20,9 +27,23 @@ export default function Layout() {
 
   return (
     <div className="app-layout">
-      <Sidebar collapsed={collapsed} onToggle={() => setCollapsed(c => !c)} />
+      {/* Mobile backdrop — tapping it closes the sidebar */}
+      {mobileOpen && (
+        <div className="mobile-sidebar-backdrop" onClick={closeMobile} />
+      )}
+
+      <Sidebar
+        collapsed={collapsed}
+        mobileOpen={mobileOpen}
+        onCloseMobile={closeMobile}
+      />
+
       <div className={`main-content ${collapsed ? 'sidebar-collapsed' : ''}`}>
-        <Topbar collapsed={collapsed} onToggle={() => setCollapsed(c => !c)} />
+        <Topbar
+          collapsed={collapsed}
+          onToggleDesktop={toggleDesktop}
+          onToggleMobile={toggleMobile}
+        />
         <main className="page-container">
           <Outlet />
         </main>
