@@ -17,6 +17,7 @@ export default function Products() {
       title={t.products}
       subtitle={lang === 'ar' ? 'إدارة كتالوج المنتجات' : 'Manage your product catalog'}
       fetchAll={productsApi.getAll}
+      fetchById={productsApi.getById}
       createItem={productsApi.create}
       updateItem={productsApi.update}
       deleteItem={productsApi.delete}

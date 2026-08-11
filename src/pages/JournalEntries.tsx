@@ -16,6 +16,18 @@ export default function JournalEntries() {
   const [modal, setModal]       = useState<'create' | 'view' | null>(null);
   const [selected, setSelected] = useState<any>(null);
   const [saving, setSaving]     = useState(false);
+  const [loadingDetails, setLoadingDetails] = useState(false);
+
+  const openView = async (entry: any) => {
+    setSelected(entry);
+    setModal('view');
+    setLoadingDetails(true);
+    try {
+      const res = await journalEntriesApi.getById(entry.id);
+      if (res.data) setSelected(res.data);
+    } catch { }
+    setLoadingDetails(false);
+  };
 
   const [form, setForm] = useState({
     date: new Date().toISOString().split('T')[0],
@@ -195,7 +207,7 @@ export default function JournalEntries() {
                       <td>{statusBadge(entry.status)}</td>
                       <td>
                         <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
-                          <button className="btn btn-ghost btn-sm btn-icon" title={t.view} onClick={() => { setSelected(entry); setModal('view'); }}><Eye size={14} /></button>
+                          <button className="btn btn-ghost btn-sm btn-icon" title={t.view} onClick={() => openView(entry)}><Eye size={14} /></button>
                           {entry.status === 'Draft' && (
                             <>
                               <button className="btn btn-success btn-sm" onClick={() => handlePost(entry.id)}><CheckCircle size={12} /> {t.post}</button>
@@ -318,39 +330,45 @@ export default function JournalEntries() {
               <button className="icon-btn" onClick={() => setModal(null)}><X size={18} /></button>
             </div>
             <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
-                {[
-                  [t.date, selected.date ? new Date(selected.date).toLocaleDateString(lang === 'ar' ? 'ar-EG' : 'en-GB') : '-'],
-                  [t.status, statusBadge(selected.status)],
-                  [t.description, selected.description || '-'],
-                ].map(([lbl, val]) => (
-                  <div key={lbl as string} style={{ background: 'var(--bg-elevated)', borderRadius: 'var(--radius-md)', padding: '10px 14px' }}>
-                    <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 4 }}>{lbl}</div>
-                    <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{val}</div>
+              {loadingDetails ? (
+                <div className="loading-overlay"><div className="spinner" /></div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+                    {[
+                      [t.date, selected.date ? new Date(selected.date).toLocaleDateString(lang === 'ar' ? 'ar-EG' : 'en-GB') : '-'],
+                      [t.status, statusBadge(selected.status)],
+                      [t.description, selected.description || '-'],
+                    ].map(([lbl, val]) => (
+                      <div key={lbl as string} style={{ background: 'var(--bg-elevated)', borderRadius: 'var(--radius-md)', padding: '10px 14px' }}>
+                        <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 4 }}>{lbl}</div>
+                        <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{val}</div>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-              {(selected.lines || []).length > 0 && (
-                <div>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 8 }}>{t.entryLines}</div>
-                  <table className="data-table" style={{ border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)' }}>
-                    <thead><tr>
-                      <th>{t.accountName}</th>
-                      <th>{t.description}</th>
-                      <th>{t.debit}</th>
-                      <th>{t.credit}</th>
-                    </tr></thead>
-                    <tbody>
-                      {selected.lines.map((l: any, i: number) => (
-                        <tr key={i}>
-                          <td className="td-main">{l.accountName || accountName(l.accountId)}</td>
-                          <td>{l.description || '-'}</td>
-                          <td style={{ color: 'var(--accent-emerald)', fontWeight: 600 }}>{l.debitAmount ? `${t.egp} ${l.debitAmount.toLocaleString()}` : '-'}</td>
-                          <td style={{ color: 'var(--accent-rose)', fontWeight: 600 }}>{l.creditAmount ? `${t.egp} ${l.creditAmount.toLocaleString()}` : '-'}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                  {(selected.lines || []).length > 0 && (
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 8 }}>{t.entryLines}</div>
+                      <table className="data-table" style={{ border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)' }}>
+                        <thead><tr>
+                          <th>{t.accountName}</th>
+                          <th>{t.description}</th>
+                          <th>{t.debit}</th>
+                          <th>{t.credit}</th>
+                        </tr></thead>
+                        <tbody>
+                          {selected.lines.map((l: any, i: number) => (
+                            <tr key={i}>
+                              <td className="td-main">{l.accountName || accountName(l.accountId)}</td>
+                              <td>{l.description || '-'}</td>
+                              <td style={{ color: 'var(--accent-emerald)', fontWeight: 600 }}>{l.debitAmount ? `${t.egp} ${l.debitAmount.toLocaleString()}` : '-'}</td>
+                              <td style={{ color: 'var(--accent-rose)', fontWeight: 600 }}>{l.creditAmount ? `${t.egp} ${l.creditAmount.toLocaleString()}` : '-'}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

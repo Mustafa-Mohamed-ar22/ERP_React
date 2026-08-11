@@ -112,6 +112,18 @@ export default function PurchaseOrders() {
   const [modal, setModal]           = useState<'create' | 'view' | 'receive' | null>(null);
   const [selected, setSelected]     = useState<any>(null);
   const [saving, setSaving]         = useState(false);
+  const [loadingDetails, setLoadingDetails] = useState(false);
+
+  const openView = async (order: any) => {
+    setSelected(order);
+    setModal('view');
+    setLoadingDetails(true);
+    try {
+      const res = await purchaseOrdersApi.getById(order.id);
+      if (res.data) setSelected(res.data);
+    } catch { }
+    setLoadingDetails(false);
+  };
 
   const [form, setForm] = useState({
     supplierId: '', warehouseId: '',
@@ -259,7 +271,7 @@ export default function PurchaseOrders() {
                         <td><span className={`badge ${s.cls}`}>{s.label}</span></td>
                         <td>
                           <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
-                            <button className="btn btn-ghost btn-sm btn-icon" title={t.view} onClick={() => { setSelected(o); setModal('view'); }}><Eye size={14} /></button>
+                            <button className="btn btn-ghost btn-sm btn-icon" title={t.view} onClick={() => openView(o)}><Eye size={14} /></button>
                             {canSubmit(o.status) && <button className="btn btn-secondary btn-sm" onClick={() => handleAction('submit', o.id)}><Send size={12} /> {lang === 'ar' ? 'تقديم' : 'Submit'}</button>}
                             {canApprove(o.status) && <button className="btn btn-success btn-sm" onClick={() => handleAction('approve', o.id)}><CheckCircle size={12} /> {lang === 'ar' ? 'اعتماد' : 'Approve'}</button>}
                             {canReceive(o.status) && (

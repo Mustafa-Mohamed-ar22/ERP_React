@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { leaveRequestsApi, employeesApi } from '../api/endpoints';
-import { Plus, Search, X, RefreshCw, CheckCircle, XCircle, Calendar, Ban, User, Filter } from 'lucide-react';
+import { Plus, Search, X, RefreshCw, CheckCircle, XCircle, Calendar, Ban, User, Filter, Eye } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useI18n } from '../context/I18nContext';
 import { extractApiError } from '../api/client';
@@ -14,8 +14,21 @@ export default function LeaveRequests() {
   const [employees, setEmployees] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [modal, setModal] = useState<'create' | null>(null);
+  const [modal, setModal] = useState<'create' | 'view' | null>(null);
   const [saving, setSaving] = useState(false);
+  const [viewDetails, setViewDetails] = useState<any>(null);
+  const [loadingDetails, setLoadingDetails] = useState(false);
+
+  const openView = async (req: any) => {
+    setViewDetails(req);
+    setModal('view');
+    setLoadingDetails(true);
+    try {
+      const res = await leaveRequestsApi.getById(req.id);
+      if (res.data) setViewDetails(res.data);
+    } catch { }
+    setLoadingDetails(false);
+  };
 
   const [form, setForm] = useState({
     employeeId: '',
@@ -239,6 +252,7 @@ export default function LeaveRequests() {
                       <td><span className={`badge ${st.cls}`}>{st.label}</span></td>
                       <td>
                         <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
+                          <button className="btn btn-ghost btn-sm btn-icon" onClick={() => openView(req)} title={lang === 'ar' ? 'عرض التفاصيل' : 'View Details'}><Eye size={14} /></button>
                           {req.status === 'Pending' && (
                             <>
                               {tab === 'all' && (
@@ -360,6 +374,62 @@ export default function LeaveRequests() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {/* View Details Modal */}
+      {modal === 'view' && viewDetails && (
+        <div className="modal-backdrop" onClick={e => e.target === e.currentTarget && setModal(null)}>
+          <div className="modal modal-lg">
+            <div className="modal-header">
+              <div className="modal-title">{lang === 'ar' ? 'تفاصيل طلب الإجازة' : 'Leave Request Details'}</div>
+              <button className="icon-btn" onClick={() => setModal(null)}><X size={18} /></button>
+            </div>
+            <div className="modal-body">
+              {loadingDetails ? (
+                <div className="loading-overlay"><div className="spinner" /></div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                  {/* Status banner */}
+                  <div style={{ background: 'var(--bg-elevated)', padding: '12px 16px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: 16, color: 'var(--text-primary)' }}>
+                        {leaveTypes.find((l: any) => l.value === viewDetails.leaveType)?.label || viewDetails.leaveType}
+                      </div>
+                      {viewDetails.employeeName && <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 2 }}>{viewDetails.employeeName}</div>}
+                    </div>
+                    <span className={`badge ${statusMap[viewDetails.status]?.cls || 'badge-default'}`} style={{ fontSize: 13, padding: '6px 12px' }}>
+                      {statusMap[viewDetails.status]?.label || viewDetails.status}
+                    </span>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
+                    {[
+                      [lang === 'ar' ? 'تاريخ البداية' : 'Start Date', viewDetails.startDate ? new Date(viewDetails.startDate).toLocaleDateString(lang === 'ar' ? 'ar-EG' : 'en-GB') : '-'],
+                      [lang === 'ar' ? 'تاريخ النهاية' : 'End Date', viewDetails.endDate ? new Date(viewDetails.endDate).toLocaleDateString(lang === 'ar' ? 'ar-EG' : 'en-GB') : '-'],
+                      [lang === 'ar' ? 'عدد الأيام' : 'Duration', (() => { try { const d = Math.ceil((new Date(viewDetails.endDate).getTime() - new Date(viewDetails.startDate).getTime()) / (1000 * 60 * 60 * 24)) + 1; return `${d} ${lang === 'ar' ? 'أيام' : 'days'}`; } catch { return '-'; } })()],
+                      [lang === 'ar' ? 'نوع الإجازة' : 'Leave Type', leaveTypes.find((l: any) => l.value === viewDetails.leaveType)?.label || viewDetails.leaveType || '-'],
+                      [lang === 'ar' ? 'الحالة' : 'Status', statusMap[viewDetails.status]?.label || viewDetails.status || '-'],
+                    ].map(([lbl, val]) => (
+                      <div key={lbl as string} style={{ background: 'var(--bg-elevated)', padding: '12px 14px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)' }}>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 4 }}>{lbl}</div>
+                        <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{val}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {viewDetails.reason && (
+                    <div style={{ background: 'var(--bg-elevated)', padding: '12px 14px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)' }}>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 6 }}>{lang === 'ar' ? 'سبب الطلب' : 'Reason'}</div>
+                      <div style={{ fontSize: 14, color: 'var(--text-primary)', lineHeight: 1.6 }}>{viewDetails.reason}</div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-secondary" onClick={() => setModal(null)}>{t.close}</button>
+            </div>
           </div>
         </div>
       )}

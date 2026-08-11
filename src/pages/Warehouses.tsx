@@ -17,6 +17,7 @@ export default function Warehouses() {
       title={t.warehouses}
       subtitle={lang === 'ar' ? 'إدارة المخازن والمستودعات' : 'Manage storage locations'}
       fetchAll={warehousesApi.getAll}
+      fetchById={warehousesApi.getById}
       createItem={warehousesApi.create}
       updateItem={warehousesApi.update}
       deleteItem={warehousesApi.delete}

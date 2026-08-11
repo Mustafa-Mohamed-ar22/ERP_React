@@ -11,6 +11,7 @@ export default function Categories() {
       title={t.categories}
       subtitle={lang === 'ar' ? 'تصنيف المنتجات' : 'Organize products into categories'}
       fetchAll={categoriesApi.getAll}
+      fetchById={categoriesApi.getById}
       createItem={categoriesApi.create}
       updateItem={categoriesApi.update}
       deleteItem={categoriesApi.delete}

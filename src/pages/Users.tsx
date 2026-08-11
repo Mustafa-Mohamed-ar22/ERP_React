@@ -70,10 +70,17 @@ export default function Users() {
     setModal('create');
   };
 
-  const openAssignRoles = (user: any) => {
+  const openAssignRoles = async (user: any) => {
     setSelectedUser(user);
     setSelectedRoles(user.roles || []);
     setModal('assign-roles');
+    try {
+      const res = await usersApi.getById(user.id);
+      if (res.data) {
+        setSelectedUser(res.data);
+        setSelectedRoles(res.data.roles || []);
+      }
+    } catch { }
   };
 
   const openDeactivate = (user: any) => {

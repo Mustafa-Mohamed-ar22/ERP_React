@@ -22,6 +22,7 @@ export default function Departments() {
       title={t.departments}
       subtitle={lang === 'ar' ? 'الهيكل التنظيمي للأقسام' : 'Organizational department structure'}
       fetchAll={departmentsApi.getAll}
+      fetchById={departmentsApi.getById}
       createItem={departmentsApi.create}
       updateItem={departmentsApi.update}
       deleteItem={departmentsApi.delete}

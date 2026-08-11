@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { Plus, Search, Pencil, Trash2, RefreshCw, X } from 'lucide-react';
+import { Plus, Search, Pencil, Trash2, RefreshCw, X, Eye } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useI18n } from '../context/I18nContext';
 import { extractApiError } from '../api/client';
@@ -27,6 +27,7 @@ interface CrudPageProps<T extends { id?: string }> {
   title: string;
   subtitle?: string;
   fetchAll: () => Promise<{ data: T[] } | any>;
+  fetchById?: (id: string) => Promise<{ data: T } | any>;
   createItem?: (data: any) => Promise<any>;
   updateItem?: (id: string, data: any) => Promise<any>;
   deleteItem?: (id: string) => Promise<any>;
@@ -79,7 +80,7 @@ function DynamicSelect({
 }
 
 export default function CrudPage<T extends { id?: string }>({
-  title, subtitle, fetchAll, createItem, updateItem, deleteItem,
+  title, subtitle, fetchAll, fetchById, createItem, updateItem, deleteItem,
   columns, fields, idKey = 'id', defaultFormData = {}, extraActions, topActions, emptyIcon
 }: CrudPageProps<T>) {
   const { t, lang } = useI18n();
@@ -88,8 +89,10 @@ export default function CrudPage<T extends { id?: string }>({
   const [filtered, setFiltered] = useState<T[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [modal, setModal] = useState<'create' | 'edit' | 'delete' | null>(null);
+  const [modal, setModal] = useState<'create' | 'edit' | 'delete' | 'details' | null>(null);
   const [selected, setSelected] = useState<T | null>(null);
+  const [viewData, setViewData] = useState<any>(null);
+  const [fetchingDetails, setFetchingDetails] = useState(false);
   const [formData, setFormData] = useState<Record<string, any>>(defaultFormData);
   const [saving, setSaving] = useState(false);
 
@@ -118,7 +121,46 @@ export default function CrudPage<T extends { id?: string }>({
   }, [search, items]);
 
   const openCreate = () => { setFormData(defaultFormData); setSelected(null); setModal('create'); };
-  const openEdit = (row: T) => { setFormData({ ...defaultFormData, ...row }); setSelected(row); setModal('edit'); };
+
+  const openView = async (row: T) => {
+    setSelected(row);
+    setViewData(row);
+    setModal('details');
+    const id = (row as any)[idKey];
+    if (fetchById && id) {
+      setFetchingDetails(true);
+      try {
+        const res = await fetchById(id);
+        if (res.data) setViewData(res.data);
+      } catch (err) {
+        toast.error(extractApiError(err));
+      } finally {
+        setFetchingDetails(false);
+      }
+    }
+  };
+
+  const openEdit = async (row: T) => {
+    setSelected(row);
+    let data: any = row;
+    const id = (row as any)[idKey];
+    if (fetchById && id) {
+      try {
+        const res = await fetchById(id);
+        if (res.data) data = res.data;
+      } catch {
+        // fallback
+      }
+    }
+    const formattedData = { ...defaultFormData, ...data };
+    fields.forEach(f => {
+      if (f.type === 'date' && formattedData[f.name] && typeof formattedData[f.name] === 'string') {
+        formattedData[f.name] = formattedData[f.name].split('T')[0];
+      }
+    });
+    setFormData(formattedData);
+    setModal('edit');
+  };
   const openDelete = (row: T) => { setSelected(row); setModal('delete'); };
   const closeModal = () => { setModal(null); setSelected(null); };
 
@@ -271,9 +313,12 @@ export default function CrudPage<T extends { id?: string }>({
                         {c.render ? c.render(row) : String((row as any)[c.key] ?? '-')}
                       </td>
                     ))}
-                    {(updateItem || deleteItem || extraActions) && (
+                    {(updateItem || deleteItem || extraActions || fetchById) && (
                       <td>
                         <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
+                          <button className="btn btn-ghost btn-sm btn-icon" onClick={() => openView(row)} title={t.view || (lang === 'ar' ? 'عرض التفاصيل' : 'View Details')}>
+                            <Eye size={14} />
+                          </button>
                           {extraActions?.(row, load)}
                           {updateItem && (
                             <button className="btn btn-ghost btn-sm btn-icon" onClick={() => openEdit(row)} title={t.edit}><Pencil size={14} /></button>
@@ -351,6 +396,63 @@ export default function CrudPage<T extends { id?: string }>({
               <button className="btn btn-danger" onClick={handleDelete} disabled={saving}>
                 {saving ? <div className="spinner" style={{ width: 14, height: 14, borderWidth: 2 }} /> : t.delete}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* View Details Modal */}
+      {modal === 'details' && viewData && (
+        <div className="modal-backdrop" onClick={e => e.target === e.currentTarget && closeModal()}>
+          <div className="modal modal-lg">
+            <div className="modal-header">
+              <div className="modal-title">
+                {lang === 'ar' ? `تفاصيل ${title}` : `${title} Details`}
+              </div>
+              <button className="icon-btn" onClick={closeModal}><X size={18} /></button>
+            </div>
+            <div className="modal-body">
+              {fetchingDetails ? (
+                <div className="loading-overlay"><div className="spinner" /></div>
+              ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16 }}>
+                  {columns.map(c => {
+                    const val = c.render ? c.render(viewData) : viewData[c.key];
+                    return (
+                      <div key={c.key} style={{ background: 'var(--bg-elevated)', padding: '12px 14px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)' }}>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 4 }}>
+                          {c.label}
+                        </div>
+                        <div style={{ fontSize: 14, fontWeight: 600, color: c.main ? 'var(--brand-primary-light)' : 'var(--text-primary)' }}>
+                          {val !== undefined && val !== null && val !== '' ? val : '-'}
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {fields.map(f => {
+                    if (columns.some(c => c.key === f.name)) return null; // skip duplicate columns
+                    let val = viewData[f.name];
+                    if (val === undefined || val === null || val === '') val = '-';
+                    else if (typeof val === 'boolean') val = val ? t.active : t.inactive;
+                    else if (f.type === 'date' && typeof val === 'string') {
+                      try { val = new Date(val).toLocaleDateString(lang === 'ar' ? 'ar-EG' : 'en-GB'); } catch { }
+                    }
+                    return (
+                      <div key={f.name} style={{ background: 'var(--bg-elevated)', padding: '12px 14px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)' }}>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 4 }}>
+                          {f.label}
+                        </div>
+                        <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-primary)' }}>
+                          {val}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-secondary" onClick={closeModal}>{t.close}</button>
             </div>
           </div>
         </div>

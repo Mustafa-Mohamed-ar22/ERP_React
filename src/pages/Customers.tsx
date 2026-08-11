@@ -11,6 +11,7 @@ export default function Customers() {
       title={t.customers}
       subtitle={lang === 'ar' ? 'إدارة قاعدة بيانات العملاء' : 'Manage your customer database'}
       fetchAll={customersApi.getAll}
+      fetchById={customersApi.getById}
       createItem={customersApi.create}
       updateItem={customersApi.update}
       deleteItem={customersApi.delete}

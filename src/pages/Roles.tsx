@@ -70,12 +70,22 @@ export default function Roles() {
     setModal('create');
   };
 
-  const openEdit = (role: any) => {
+  const openEdit = async (role: any) => {
     setSelectedRole(role);
     setName(role.name || '');
     setDescription(role.description || '');
-    setSelectedPermissions(role.permissions || []);
+    setSelectedPermissions(role.permissions || role.permissionCodes || []);
     setModal('edit');
+    try {
+      const res = await rolesApi.getById(role.id);
+      if (res.data) {
+        const data = res.data;
+        setSelectedRole(data);
+        setName(data.name || '');
+        setDescription(data.description || '');
+        setSelectedPermissions(data.permissions || data.permissionCodes || []);
+      }
+    } catch { }
   };
 
   const openDelete = (role: any) => {

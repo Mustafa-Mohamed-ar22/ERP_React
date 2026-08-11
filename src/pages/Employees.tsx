@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { employeesApi, branchesApi, departmentsApi, rolesApi } from '../api/endpoints';
-import { Plus, Search, Pencil, Trash2, RefreshCw, X, UserCheck, KeyRound, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Plus, Search, Pencil, Trash2, RefreshCw, X, UserCheck, KeyRound, CheckCircle2, AlertCircle, Eye } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useI18n } from '../context/I18nContext';
 import { extractApiError } from '../api/client';
@@ -9,6 +9,11 @@ const EMPTY_FORM = {
   employeeCode: '', fullName: '', nationalId: '', dateOfBirth: '',
   hireDate: '', jobTitle: '', departmentId: '', branchId: '',
   managerId: '', baseSalary: 0, email: '', phone: '', address: '', userId: '',
+};
+
+const formatDateForInput = (d?: string) => {
+  if (!d) return '';
+  return d.split('T')[0] || '';
 };
 
 export default function Employees() {
@@ -23,8 +28,10 @@ export default function Employees() {
   const [availableRoles, setAvailableRoles] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [modal, setModal] = useState<'create' | 'edit' | 'delete' | 'grant-access' | null>(null);
+  const [modal, setModal] = useState<'create' | 'edit' | 'delete' | 'grant-access' | 'details' | null>(null);
   const [selected, setSelected] = useState<any>(null);
+  const [viewDetails, setViewDetails] = useState<any>(null);
+  const [loadingDetails, setLoadingDetails] = useState(false);
   const [form, setForm] = useState({ ...EMPTY_FORM });
   const [saving, setSaving] = useState(false);
 
@@ -74,7 +81,35 @@ export default function Employees() {
   }, [search, items]);
 
   const openCreate = () => { setForm({ ...EMPTY_FORM }); setSelected(null); setModal('create'); };
-  const openEdit = (row: any) => { setForm({ ...EMPTY_FORM, ...row }); setSelected(row); setModal('edit'); };
+
+  const openView = async (row: any) => {
+    setSelected(row);
+    setViewDetails(row);
+    setModal('details');
+    setLoadingDetails(true);
+    try {
+      const res = await employeesApi.getById(row.id);
+      if (res.data) setViewDetails(res.data);
+    } catch { }
+    setLoadingDetails(false);
+  };
+
+  const openEdit = async (row: any) => {
+    setSelected(row);
+    let data = row;
+    try {
+      const res = await employeesApi.getById(row.id);
+      if (res.data) data = res.data;
+    } catch { }
+    setForm({
+      ...EMPTY_FORM,
+      ...data,
+      hireDate: formatDateForInput(data.hireDate),
+      dateOfBirth: formatDateForInput(data.dateOfBirth),
+    });
+    setModal('edit');
+  };
+
   const openDelete = (row: any) => { setSelected(row); setModal('delete'); };
   const openGrantAccess = (row: any) => {
     setSelected(row);
@@ -231,6 +266,9 @@ export default function Employees() {
                       <td><span className={`badge ${statusBadge[emp.status] || 'badge-default'}`}>{statusLabel[emp.status] || emp.status || '-'}</span></td>
                       <td>
                         <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
+                          <button className="btn btn-ghost btn-sm btn-icon" onClick={() => openView(emp)} title={t.view || (lang === 'ar' ? 'عرض التفاصيل' : 'View Details')}>
+                            <Eye size={14} />
+                          </button>
                           {!emp.userId && (
                             <button
                               className="btn btn-secondary btn-sm"
@@ -462,6 +500,116 @@ export default function Employees() {
               <button className="btn btn-danger" onClick={handleDelete} disabled={saving}>
                 {saving ? <div className="spinner" style={{ width: 14, height: 14, borderWidth: 2 }} /> : t.delete}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Employee Details Modal */}
+      {modal === 'details' && viewDetails && (
+        <div className="modal-backdrop" onClick={e => e.target === e.currentTarget && closeModal()}>
+          <div className="modal modal-lg">
+            <div className="modal-header">
+              <div className="modal-title">
+                {lang === 'ar' ? 'تفاصيل بيانات الموظف' : 'Employee Details'}
+              </div>
+              <button className="icon-btn" onClick={closeModal}><X size={18} /></button>
+            </div>
+            <div className="modal-body">
+              {loadingDetails ? (
+                <div className="loading-overlay"><div className="spinner" /></div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                  {/* Summary Card */}
+                  <div style={{ background: 'var(--bg-elevated)', padding: 16, borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+                    <div>
+                      <h2 style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>{viewDetails.fullName}</h2>
+                      <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 2 }}>{viewDetails.jobTitle || '-'} • <span className="badge badge-info">{viewDetails.employeeCode}</span></div>
+                    </div>
+                    <div>
+                      <span className={`badge ${statusBadge[viewDetails.status] || 'badge-default'}`} style={{ fontSize: 13, padding: '6px 12px' }}>
+                        {statusLabel[viewDetails.status] || viewDetails.status || '-'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Details Grid */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 14 }}>
+                    <div style={{ background: 'var(--bg-elevated)', padding: '12px 14px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)' }}>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 4 }}>{t.branch}</div>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{viewDetails.branchName || '-'}</div>
+                    </div>
+
+                    <div style={{ background: 'var(--bg-elevated)', padding: '12px 14px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)' }}>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 4 }}>{t.department}</div>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{viewDetails.departmentName || '-'}</div>
+                    </div>
+
+                    <div style={{ background: 'var(--bg-elevated)', padding: '12px 14px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)' }}>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 4 }}>{t.manager}</div>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{viewDetails.managerName || '-'}</div>
+                    </div>
+
+                    <div style={{ background: 'var(--bg-elevated)', padding: '12px 14px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)' }}>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 4 }}>{t.baseSalary}</div>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--accent-emerald)' }}>{t.egp} {(viewDetails.baseSalary || 0).toLocaleString()}</div>
+                    </div>
+
+                    <div style={{ background: 'var(--bg-elevated)', padding: '12px 14px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)' }}>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 4 }}>{t.hireDate}</div>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>
+                        {viewDetails.hireDate ? new Date(viewDetails.hireDate).toLocaleDateString(lang === 'ar' ? 'ar-EG' : 'en-GB') : '-'}
+                      </div>
+                    </div>
+
+                    <div style={{ background: 'var(--bg-elevated)', padding: '12px 14px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)' }}>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 4 }}>{t.dateOfBirth}</div>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>
+                        {viewDetails.dateOfBirth ? new Date(viewDetails.dateOfBirth).toLocaleDateString(lang === 'ar' ? 'ar-EG' : 'en-GB') : '-'}
+                      </div>
+                    </div>
+
+                    <div style={{ background: 'var(--bg-elevated)', padding: '12px 14px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)' }}>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 4 }}>{t.nationalId}</div>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{viewDetails.nationalId || '-'}</div>
+                    </div>
+
+                    <div style={{ background: 'var(--bg-elevated)', padding: '12px 14px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)' }}>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 4 }}>{t.email}</div>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{viewDetails.email || '-'}</div>
+                    </div>
+
+                    <div style={{ background: 'var(--bg-elevated)', padding: '12px 14px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)' }}>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 4 }}>{t.phone}</div>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{viewDetails.phone || '-'}</div>
+                    </div>
+
+                    <div style={{ background: 'var(--bg-elevated)', padding: '12px 14px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)' }}>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 4 }}>{lang === 'ar' ? 'حساب الوصول بالنظام' : 'System Access'}</div>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>
+                        {viewDetails.userId ? (
+                          <span className="badge badge-success" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                            <CheckCircle2 size={12} /> {lang === 'ar' ? 'يمتلك حساب' : 'Has System Account'}
+                          </span>
+                        ) : (
+                          <span className="badge badge-default" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                            <AlertCircle size={12} /> {lang === 'ar' ? 'عامل / بدون حساب' : 'No User Account'}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {viewDetails.address && (
+                    <div style={{ background: 'var(--bg-elevated)', padding: '12px 14px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)' }}>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 4 }}>{t.address}</div>
+                      <div style={{ fontSize: 14, color: 'var(--text-primary)' }}>{viewDetails.address}</div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-secondary" onClick={closeModal}>{t.close}</button>
             </div>
           </div>
         </div>

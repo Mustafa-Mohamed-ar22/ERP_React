@@ -33,6 +33,7 @@ export default function Accounts() {
       title={t.accounts}
       subtitle={lang === 'ar' ? 'دليل الحسابات العام' : 'General Ledger Chart of Accounts'}
       fetchAll={accountsApi.getAll}
+      fetchById={accountsApi.getById}
       createItem={accountsApi.create}
       updateItem={accountsApi.update}
       deleteItem={accountsApi.delete}

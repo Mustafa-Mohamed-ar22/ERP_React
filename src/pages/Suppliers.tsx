@@ -11,6 +11,7 @@ export default function Suppliers() {
       title={t.suppliers}
       subtitle={lang === 'ar' ? 'إدارة بيانات الموردين' : 'Manage your suppliers'}
       fetchAll={suppliersApi.getAll}
+      fetchById={suppliersApi.getById}
       createItem={suppliersApi.create}
       updateItem={suppliersApi.update}
       deleteItem={suppliersApi.delete}

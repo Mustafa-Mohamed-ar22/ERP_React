@@ -11,6 +11,7 @@ export default function Branches() {
       title={t.branches}
       subtitle={lang === 'ar' ? 'إدارة فروع الشركة' : 'Manage company branches'}
       fetchAll={branchesApi.getAll}
+      fetchById={branchesApi.getById}
       createItem={branchesApi.create}
       updateItem={branchesApi.update}
       deleteItem={branchesApi.delete}
